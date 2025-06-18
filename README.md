@@ -31,6 +31,24 @@ Adding support for new mods in Catppuccin UI is temporarily paused. I plan to ad
 4. Launch Minecraft and open the resource packs menu from the options.
 5. Select the pack and press done.
 
+## Generating packs from templates
+```
+usage: create_flavors.py [-h] [-f {Latte,Frappé,Macchiato,Mocha,Frappe}] [-a {Rosewater,Flamingo,Pink,Mauve,Red,Maroon,Peach,Yellow,Green,Teal,Sky,Sapphire,Blue,Lavender}]
+
+Create different flavors of Catppuccin UI resource pack from a template.
+
+options:
+  -h, --help            show this help message and exit
+  -f, --flavor {Latte,Frappé,Macchiato,Mocha,Frappe}
+                        Flavor to create. If not specified, all flavors will be created.
+  -a, --accent {Rosewater,Flamingo,Pink,Mauve,Red,Maroon,Peach,Yellow,Green,Teal,Sky,Sapphire,Blue,Lavender}
+                        Accent color to create. If not specified, all accent colors will be created.
+```
+1. From the root directory, run `cd resource-packs/Catppuccin UI`.
+2. If you don't have the dependencies installed, install them with `pip install pillow catppuccin` before runnning the script.
+3. Run `python create_flavors.py`. Optionally use the flags `-f` and `-a` to specitify for an single combination.
+4. The packs should be generated in the `output` directory inside the Catppuccin UI directory.
+
 ### Shaders
 1. Install [Iris](https://modrinth.com/mod/iris) and [Sodium](https://modrinth.com/mod/sodium).
 2. Download a `catppuccin-shaders.zip` zip file from the [releases](https://github.com/catppuccin/minecraft/releases) page.

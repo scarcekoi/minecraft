@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Standard imports
+import argparse
 from colorsys import (
     rgb_to_hls,
     hls_to_rgb)
@@ -35,6 +36,26 @@ from catppuccin import PALETTE
 
 def main():
     templates_folder = PurePath('template')
+    parser = argparse.ArgumentParser(
+        prog='create_flavors.py',
+        description='Create different flavors of Catppuccin UI resource pack from a template.')
+
+    parser.add_argument('-f', '--flavor', help='Flavor to create. If not specified, all flavors will be created.',
+                        choices=[flavor.name for flavor in PALETTE] + ['Frappe'], # add 'Frappe' for compatibility
+                        default=None,
+                        type=str.capitalize)
+    parser.add_argument('-a', '--accent', help='Accent color to create. If not specified, all accent colors will be created.',
+                        choices=[color.name for color in PALETTE.mocha.colors if color.accent], 
+                        default=None,
+                        type=str.capitalize)
+
+    parser.add_argument("-d", "--dry-run", action="store_true",
+                        help="Run the script in dry-run mode. No files will be created or modified.")
+    
+    args = parser.parse_args()
+    selected_flavor = args.flavor
+    selected_accent = args.accent
+    dry_run = args.dry_run
 
     while True:
         template_version = input(
@@ -141,50 +162,96 @@ def main():
             f'\'import_language_files.py\' script in the \'lang\' folder.')
         return
 
-    # Get all accent colors from the catppuccin palette library
+    # ask the user for flavor and accent color if not specified
+    flavor_names = [flavor.name for flavor in PALETTE]
+    while True:
+        if selected_flavor is not None:
+            break
+        selected_flavor = input(
+            '-----------------------------------------------------------------------\n'
+            'Enter which flavor to create. Leave blank for default (all)\n'
+            f'Available flavors: {flavor_names}\n').capitalize()
+        if selected_flavor not in flavor_names + ['Frappe', ""]:
+            print(f'ERROR: Flavor \'{selected_flavor}\' not found! Choose from the available flavors.')
+            selected_flavor = None
+    
     accent_colors = [color.name for color in PALETTE.mocha.colors if color.accent == True]
+    while True:
+        if selected_accent is not None:
+            break
+        selected_accent = input(
+            '-----------------------------------------------------------------------\n'
+            'Enter which accent to create. Leave blank for default (all)\n'
+            f'Available accents: {accent_colors}\n').capitalize()
+        if selected_accent not in accent_colors + [""]:
+            print(f'ERROR: accent \'{selected_accent}\' not found! Choose from the available accents.')
+            selected_accent = None
+    # Get all flavors and accent colors from the catppuccin palette library if not specified.
+    flavor_names = [selected_flavor] if selected_flavor else flavor_names + ['Frappe'] # Frappe accented e workaround.
+    accent_colors = [selected_accent] if selected_accent else accent_colors
 
     # Create a map of red2 values since they don't exist in the catppuccin palette
     red2 = {PALETTE.mocha.name: darker_red(PALETTE.mocha.colors.red.hsl),
             PALETTE.macchiato.name: darker_red(PALETTE.macchiato.colors.red.hsl),
-            PALETTE.frappe.name: darker_red(PALETTE.frappe.colors.red.hsl),
+            "Frappe": darker_red(PALETTE.frappe.colors.red.hsl),
             PALETTE.latte.name: darker_red(PALETTE.latte.colors.red.hsl)}
 
+    if dry_run:
+            print(
+                'Running in dry-run mode. No files will be created or modified.\n'
+                'You can remove the -d or --dry-run argument to create the flavors.')
+            
     # Start to generate different flavors and accent colors from the template.
     for flavor_obj in PALETTE:
         flavor = flavor_obj.name
+        
+        # Frappe accented e workaround.
+        if flavor == "Frappé":
+            flavor = "Frappe"
+
+
+        # Skip flavors that are not in the selected flavors.
+        if flavor not in flavor_names:
+            continue
+
+        if dry_run:
+            print(f"Processing flavor: {flavor}\n"
+                f"Selected accent colors: {', '.join(accent_colors)}\n")
+            continue
+
         print(f'\nStarting to create flavor {flavor} from template {template_version}!\n')
 
         
         # Create color map for current flavor.
         color_map = {
-            (17, 17, 27): rgb_to_tuple(flavor_obj.colors.crust.rgb),
-            (24, 24, 37): rgb_to_tuple(flavor_obj.colors.mantle.rgb),
-            (30, 30, 46): rgb_to_tuple(flavor_obj.colors.base.rgb),
-            (49, 50, 68): rgb_to_tuple(flavor_obj.colors.surface0.rgb),
-            (69, 71, 90): rgb_to_tuple(flavor_obj.colors.surface1.rgb),
-            (88, 91, 112): rgb_to_tuple(flavor_obj.colors.surface2.rgb),
-            (108, 112, 134): rgb_to_tuple(flavor_obj.colors.overlay0.rgb),
-            (127, 132, 156): rgb_to_tuple(flavor_obj.colors.overlay1.rgb),
-            (147, 153, 178): rgb_to_tuple(flavor_obj.colors.overlay2.rgb),
-            (166, 173, 200): rgb_to_tuple(flavor_obj.colors.subtext0.rgb),
-            (186, 194, 222): rgb_to_tuple(flavor_obj.colors.subtext1.rgb),
-            (205, 214, 244): rgb_to_tuple(flavor_obj.colors.text.rgb),
-            (180, 190, 254): rgb_to_tuple(flavor_obj.colors.lavender.rgb),
-            (137, 180, 250): rgb_to_tuple(flavor_obj.colors.blue.rgb),
-            (116, 199, 236): rgb_to_tuple(flavor_obj.colors.sapphire.rgb),
-            (137, 220, 235): rgb_to_tuple(flavor_obj.colors.sky.rgb),
-            (148, 226, 213): rgb_to_tuple(flavor_obj.colors.teal.rgb),
-            (166, 227, 161): rgb_to_tuple(flavor_obj.colors.green.rgb),
-            (249, 226, 175): rgb_to_tuple(flavor_obj.colors.yellow.rgb),
-            (250, 179, 135): rgb_to_tuple(flavor_obj.colors.peach.rgb),
-            (235, 160, 172): rgb_to_tuple(flavor_obj.colors.maroon.rgb),
-            (243, 139, 168): rgb_to_tuple(flavor_obj.colors.red.rgb),
-            (181, 103, 125): red2[flavor_obj.name],
-            (203, 166, 247): rgb_to_tuple(flavor_obj.colors.mauve.rgb),
-            (245, 194, 231): rgb_to_tuple(flavor_obj.colors.pink.rgb),
-            (242, 205, 205): rgb_to_tuple(flavor_obj.colors.flamingo.rgb),
-            (245, 224, 220): rgb_to_tuple(flavor_obj.colors.rosewater.rgb)}
+            rgb_to_tuple(PALETTE.mocha.colors.crust.rgb): rgb_to_tuple(flavor_obj.colors.crust.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.mantle.rgb): rgb_to_tuple(flavor_obj.colors.mantle.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.base.rgb): rgb_to_tuple(flavor_obj.colors.base.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.surface0.rgb): rgb_to_tuple(flavor_obj.colors.surface0.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.surface1.rgb): rgb_to_tuple(flavor_obj.colors.surface1.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.surface2.rgb): rgb_to_tuple(flavor_obj.colors.surface2.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.overlay0.rgb): rgb_to_tuple(flavor_obj.colors.overlay0.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.overlay1.rgb): rgb_to_tuple(flavor_obj.colors.overlay1.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.overlay2.rgb): rgb_to_tuple(flavor_obj.colors.overlay2.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.subtext0.rgb): rgb_to_tuple(flavor_obj.colors.subtext0.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.subtext1.rgb): rgb_to_tuple(flavor_obj.colors.subtext1.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.text.rgb): rgb_to_tuple(flavor_obj.colors.text.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.lavender.rgb): rgb_to_tuple(flavor_obj.colors.lavender.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.blue.rgb): rgb_to_tuple(flavor_obj.colors.blue.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.sapphire.rgb): rgb_to_tuple(flavor_obj.colors.sapphire.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.sky.rgb): rgb_to_tuple(flavor_obj.colors.sky.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.teal.rgb): rgb_to_tuple(flavor_obj.colors.teal.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.green.rgb): rgb_to_tuple(flavor_obj.colors.green.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.yellow.rgb): rgb_to_tuple(flavor_obj.colors.yellow.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.peach.rgb): rgb_to_tuple(flavor_obj.colors.peach.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.maroon.rgb): rgb_to_tuple(flavor_obj.colors.maroon.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.red.rgb): rgb_to_tuple(flavor_obj.colors.red.rgb),
+            red2["Mocha"]: red2[flavor],
+            rgb_to_tuple(PALETTE.mocha.colors.mauve.rgb): rgb_to_tuple(flavor_obj.colors.mauve.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.pink.rgb): rgb_to_tuple(flavor_obj.colors.pink.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.flamingo.rgb): rgb_to_tuple(flavor_obj.colors.flamingo.rgb),
+            rgb_to_tuple(PALETTE.mocha.colors.rosewater.rgb): rgb_to_tuple(flavor_obj.colors.rosewater.rgb),
+        }
 
         # Creating a temporary template for each flavor which is used later on just to change the accent colors.
         print(f'Starting to create a temporary template for {flavor}!\n')
@@ -392,43 +459,32 @@ def main():
 
         print(f'Temporary template for flavor {flavor} is ready!\n')
 
+
+        # Create color map for current accent color.
+        accent_color_dict = {
+            flavor_obj.colors.lavender.name: rgb_to_tuple(flavor_obj.colors.lavender.rgb),
+            flavor_obj.colors.blue.name: rgb_to_tuple(flavor_obj.colors.blue.rgb),
+            flavor_obj.colors.sapphire.name: rgb_to_tuple(flavor_obj.colors.sapphire.rgb),
+            flavor_obj.colors.sky.name: rgb_to_tuple(flavor_obj.colors.sky.rgb),
+            flavor_obj.colors.teal.name: rgb_to_tuple(flavor_obj.colors.teal.rgb),
+            flavor_obj.colors.green.name: rgb_to_tuple(flavor_obj.colors.green.rgb),
+            flavor_obj.colors.yellow.name: rgb_to_tuple(flavor_obj.colors.yellow.rgb),
+            flavor_obj.colors.peach.name: rgb_to_tuple(flavor_obj.colors.peach.rgb),
+            flavor_obj.colors.maroon.name: rgb_to_tuple(flavor_obj.colors.maroon.rgb),
+            flavor_obj.colors.red.name: rgb_to_tuple(flavor_obj.colors.red.rgb),
+            flavor_obj.colors.mauve.name: rgb_to_tuple(flavor_obj.colors.mauve.rgb),
+            flavor_obj.colors.pink.name: rgb_to_tuple(flavor_obj.colors.pink.rgb),
+            flavor_obj.colors.flamingo.name: rgb_to_tuple(flavor_obj.colors.flamingo.rgb),
+            flavor_obj.colors.rosewater.name: rgb_to_tuple(flavor_obj.colors.rosewater.rgb),
+        }
+
         # Generate resource packs for each accent color from the temporary template of flavor created earlier.
         for color in accent_colors:
             print(f'Starting to create flavor {flavor} with accent color {color}!')
 
             version_folder = PurePath(output_folder, f'Catppuccin {flavor} {color}')
 
-            # Create color map for current accent color.
-            if color == flavor_obj.colors.lavender.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.lavender.rgb)
-            elif color == flavor_obj.colors.blue.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.blue.rgb)
-            elif color == flavor_obj.colors.sapphire.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.sapphire.rgb)
-            elif color == flavor_obj.colors.sky.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.sky.rgb)
-            elif color == flavor_obj.colors.teal.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.teal.rgb)
-            elif color == flavor_obj.colors.green.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.green.rgb)
-            elif color == flavor_obj.colors.yellow.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.yellow.rgb)
-            elif color == flavor_obj.colors.peach.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.peach.rgb)
-            elif color == flavor_obj.colors.maroon.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.maroon.rgb)
-            elif color == flavor_obj.colors.red.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.red.rgb)
-            elif color == flavor_obj.colors.mauve.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.mauve.rgb)
-            elif color == flavor_obj.colors.pink.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.pink.rgb)
-            elif color == flavor_obj.colors.flamingo.name:
-                accent_color = rgb_to_tuple(flavor_obj.colors.flamingo.rgb)
-            else:
-                accent_color = rgb_to_tuple(flavor_obj.colors.rosewater.rgb)
-
-            accent_color_map = {(255, 0, 0): accent_color}
+            accent_color_map = {(255, 0, 0): accent_color_dict[color],}
 
             # Delete version_folder if it exists so a new one can be created.
             if os_path_exists(version_folder):
@@ -502,7 +558,7 @@ def main():
 
             make_archive(str(version_folder), 'zip', str(version_folder))
             rmtree(version_folder)
-        print(f'\nFlavor {flavor} is ready for every accent color!')
+        print(f'\nFlavor {flavor} is ready for color(s) {accent_colors}!')
 
     # Delete the temporary files folder.
     if isdir(temporary_files_dir):
@@ -523,9 +579,8 @@ def rgb_to_tuple(colorRGB):
     return (colorRGB.r, colorRGB.g, colorRGB.b)
 
 # Applies a -26% lightness adjustment to the color
-def darker_red(colorRGB):
-    hls_tuple = rgb_to_hls(*rgb_to_tuple(colorRGB))
-    red2_hls_tuple = (hls_tuple[0], hls_tuple[1] * 0.74, hls_tuple[2])
+def darker_red(colorHSL):
+    red2_hls_tuple = (colorHSL.h, colorHSL.l * 0.74, colorHSL.s)
     return tuple(round(i) for i in hls_to_rgb(*red2_hls_tuple))
 
 if __name__ == '__main__':
